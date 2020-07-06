@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	listenAddr := getEnv("LISTEN_ADDR", ":9013")
+	listenAddr := getEnv("WSPROXY_HOST", "") + ":" + getEnv("WSPROXY_PORT", "9013")
 
 	ws := wsproxy.New(new(os3))
 
