@@ -1,6 +1,7 @@
 package wsproxy
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,15 +11,6 @@ import (
 	"net/http"
 	"strings"
 )
-
-type command interface {
-	Call(ctx context.Context, out chan<- []byte) error
-}
-
-// GetURLer returns a full url for a url path.
-type GetURLer interface {
-	GetURL(url string) string
-}
 
 type cmdConnect struct {
 	getURLer GetURLer
@@ -52,13 +44,14 @@ func (c *cmdConnect) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c *cmdConnect) Call(ctx context.Context, out chan<- []byte) error {
+func (c *cmdConnect) Call(conn *wsConnection) error {
 	var body io.Reader
 	if c.body != "" {
 		body = strings.NewReader(c.body)
 	}
 
-	log.Println(c.url)
+	ctx, cancel := context.WithCancel(conn.ctx)
+	conn.registerConn(c.id, cancel)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", c.url, body)
 	if err != nil {
@@ -76,32 +69,17 @@ func (c *cmdConnect) Call(ctx context.Context, out chan<- []byte) error {
 			return fmt.Errorf("reading response body: %w", err)
 		}
 
-		event := map[string]interface{}{
-			"reason": string(body),
-			"code":   resp.StatusCode,
-		}
-		if err := sendEvent(out, "close", c.id, event); err != nil {
-			return fmt.Errorf("send error event: %w", err)
-		}
+		conn.eventColse(c.id, resp.StatusCode, body)
 		return nil
 	}
 
-	if err := sendEvent(out, "connected", c.id, nil); err != nil {
-		return fmt.Errorf("sending connected event: %w", err)
-	}
+	conn.eventConnected(c.id)
 
 	go func() {
 		// Read resp.Body until it closes or the context is done.
 		defer resp.Body.Close()
 		defer func() {
-			event := map[string]interface{}{
-				"reason": nil,
-				"code":   resp.StatusCode,
-			}
-			if err := sendEvent(out, "close", c.id, event); err != nil {
-				log.Printf("sending event to client: %v", err)
-				return
-			}
+			conn.eventColse(c.id, resp.StatusCode, []byte("null"))
 		}()
 
 		msgChan := readerToChan(resp.Body)
@@ -111,15 +89,9 @@ func (c *cmdConnect) Call(ctx context.Context, out chan<- []byte) error {
 				if !ok {
 					return
 				}
+				conn.eventData(c.id, msg)
 
-				event := map[string]interface{}{
-					"data": json.RawMessage(msg),
-				}
-				if err := sendEvent(out, "data", c.id, event); err != nil {
-					log.Printf("sending event to client: %v", err)
-					return
-				}
-			case <-ctx.Done():
+			case <-conn.ctx.Done():
 				return
 			}
 		}
@@ -127,4 +99,44 @@ func (c *cmdConnect) Call(ctx context.Context, out chan<- []byte) error {
 	return nil
 }
 
-type cmdClose struct{}
+type cmdClose struct {
+	id int
+}
+
+func (c *cmdClose) UnmarshalJSON(data []byte) error {
+	var v struct {
+		ID int `json:"id"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+
+	if v.ID == 0 {
+		return fmt.Errorf("close command requires the parameters id")
+	}
+
+	c.id = v.ID
+	return nil
+}
+
+func (c *cmdClose) Call(conn *wsConnection) error {
+	conn.CloseConn(c.id)
+	return nil
+}
+
+func readerToChan(r io.Reader) <-chan []byte {
+	c := make(chan []byte, 1)
+	go func() {
+		defer close(c)
+		scanner := bufio.NewScanner(r)
+		for scanner.Scan() {
+			c <- scanner.Bytes()
+		}
+		if err := scanner.Err(); err != nil {
+			// TODO handle error
+			log.Printf("scanner: %v", err)
+			return
+		}
+	}()
+	return c
+}
