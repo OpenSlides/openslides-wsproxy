@@ -18,7 +18,7 @@ websocket connection.
 When Go is installed, the service can be installed with:
 
 ```
-go get github.com/OpenSlides/openslides-wsproxy/cmd/autoupdate
+go get github.com/OpenSlides/openslides-wsproxy/cmd/wsproxy
 ```
 
 This command is case sensitive!
