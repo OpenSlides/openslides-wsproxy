@@ -47,7 +47,7 @@ The repository contains a dockerfile which starts the service
 
 ```
 docker build . --tag openslides-wsproxy
-docker run -p 9013:9013 openslides-wsproxy
+docker run -p 9015:9015 openslides-wsproxy
 ```
 
 
@@ -56,7 +56,7 @@ docker run -p 9013:9013 openslides-wsproxy
 There is a docker container on docker-hub:
 
 ```
-docker run -p 9013:9013 ostcar/openslides-wsproxy
+docker run -p 9015:9015 ostcar/openslides-wsproxy
 ```
 
 
@@ -68,7 +68,7 @@ used.
 When the service is running, a websocket connection can be created with:
 
 ```
-websocat ws://localhost:9013/system/autoupdate
+websocat ws://localhost:9015/system/autoupdate
 ```
 
 Afterwards it is possible to create connections to the autoupdate service by
@@ -94,7 +94,7 @@ TODO: Not implemented!!!
 
 The service can be configured with the following environment variables:
 
-* `WSPROXY_PORT`: Port where the service listens on. The default is `9013`.
+* `WSPROXY_PORT`: Port where the service listens on. The default is `9015`.
 * `WSPROXY_HOST`: The device where the service starts. The default is am
   empty string which starts the service on every device.
 * `AUTOUPDATE_HOST`: Host of the autoupdate service. The default is
