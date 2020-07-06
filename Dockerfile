@@ -23,6 +23,6 @@ WORKDIR /root/
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /root/wsproxy .
 
-EXPOSE 9013
+EXPOSE 9015
 
 CMD ./wsproxy
