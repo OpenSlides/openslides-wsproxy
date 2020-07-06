@@ -2,6 +2,7 @@ package wsproxy
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,21 +10,20 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 )
 
 type cmdConnect struct {
 	getURLer GetURLer
 	url      string
 	id       int
-	body     string
+	body     json.RawMessage
 }
 
 func (c *cmdConnect) UnmarshalJSON(data []byte) error {
 	var v struct {
-		URL  string `json:"url"`
-		ID   int    `json:"id"`
-		Body string `json:"body"`
+		URL  string          `json:"url"`
+		ID   int             `json:"id"`
+		Body json.RawMessage `json:"body"`
 	}
 	if err := json.Unmarshal(data, &v); err != nil {
 		return err
@@ -46,8 +46,8 @@ func (c *cmdConnect) UnmarshalJSON(data []byte) error {
 
 func (c *cmdConnect) Call(conn *wsConnection) error {
 	var body io.Reader
-	if c.body != "" {
-		body = strings.NewReader(c.body)
+	if c.body != nil {
+		body = bytes.NewReader(c.body)
 	}
 
 	ctx, cancel := context.WithCancel(conn.ctx)
