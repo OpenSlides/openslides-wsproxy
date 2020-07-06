@@ -84,9 +84,8 @@ autoupdate-output will be one websocket frame.
 
 To close a connection, send
 
-TODO: Not implemented!!!
 ```
-{"cmd":"disconnect","id":1}
+{"cmd":"close","id":1}
 ```
 
 

@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	wsproxy "github.com/OpenSlides/openslides-wsproxy/internal"
+	"github.com/OpenSlides/openslides-wsproxy/internal/wsproxy"
 )
 
 func main() {
