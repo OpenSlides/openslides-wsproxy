@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/OpenSlides/openslides-wsproxy/internal/wsproxy"
@@ -63,8 +64,8 @@ func getEnv(env, devaultValue string) string {
 type os3 struct{}
 
 func (o *os3) GetURL(path string) string {
-	switch path {
-	case "/system/autoupdate":
+
+	if strings.HasPrefix(path, "/system/projector") || path == "/system/autoupdate" || path == "/system/notify" {
 		host := getEnv("AUTOUPDATE_HOST", "localhost")
 		port := getEnv("AUTOUPDATE_PORT", "8002")
 		proto := getEnv("AUTOUPDATE_PROTOCOL", "http")

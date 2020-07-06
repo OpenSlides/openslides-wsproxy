@@ -65,6 +65,9 @@ docker run -p 9015:9015 ostcar/openslides-wsproxy
 To test this service the tool [websocat](https://github.com/vi/websocat) can be
 used.
 
+
+### OpenSlides 3+
+
 When the service is running, a websocket connection can be created with:
 
 ```
@@ -86,6 +89,14 @@ To close a connection, send
 
 ```
 {"cmd":"close","id":1}
+```
+
+### OpenSlides 4
+
+The command to connect to OpenSlides4 autoupdate service needs a body:
+
+```
+{"cmd":"connect","id":1,"url":"/system/autoupdate","body":[{"ids":[5],"collection":"user","fields":{"name":null}}]}
 ```
 
 
