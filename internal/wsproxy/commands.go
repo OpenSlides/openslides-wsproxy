@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -77,12 +78,13 @@ func (c *cmdConnect) Call(conn *wsConnection) error {
 
 	go func() {
 		// Read resp.Body until it closes or the context is done.
+		reason := []byte("null")
 		defer resp.Body.Close()
 		defer func() {
-			conn.eventColse(c.id, resp.StatusCode, []byte("null"))
+			conn.eventColse(c.id, resp.StatusCode, reason)
 		}()
 
-		msgChan := readerToChan(resp.Body)
+		msgChan, errChan := readerToChan(resp.Body)
 		for {
 			select {
 			case msg, ok := <-msgChan:
@@ -93,6 +95,13 @@ func (c *cmdConnect) Call(conn *wsConnection) error {
 
 			case <-conn.ctx.Done():
 				return
+			case err := <-errChan:
+				var closedErr backendClosedError
+				if errors.As(err, &closedErr) {
+					reason = []byte("connection to backend lost")
+					return
+				}
+				log.Printf("Error reading from backend: %v", err)
 			}
 		}
 	}()
@@ -124,8 +133,9 @@ func (c *cmdClose) Call(conn *wsConnection) error {
 	return nil
 }
 
-func readerToChan(r io.Reader) <-chan []byte {
+func readerToChan(r io.Reader) (<-chan []byte, <-chan error) {
 	c := make(chan []byte, 1)
+	errChan := make(chan error)
 	go func() {
 		defer close(c)
 		scanner := bufio.NewScanner(r)
@@ -134,9 +144,14 @@ func readerToChan(r io.Reader) <-chan []byte {
 		}
 		if err := scanner.Err(); err != nil {
 			// TODO handle error
-			log.Printf("scanner: %v", err)
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+			errChan <- fmt.Errorf("scanner: %w", err)
 			return
 		}
+		errChan <- backendClosedError{}
+
 	}()
-	return c
+	return c, errChan
 }
