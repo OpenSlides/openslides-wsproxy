@@ -143,7 +143,6 @@ func readerToChan(r io.Reader) (<-chan []byte, <-chan error) {
 			c <- scanner.Bytes()
 		}
 		if err := scanner.Err(); err != nil {
-			// TODO handle error
 			if errors.Is(err, context.Canceled) {
 				return
 			}
