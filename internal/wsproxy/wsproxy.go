@@ -30,8 +30,6 @@ func New(geturler GetURLer) *WSProxy {
 func (ws *WSProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		// TODO
-		log.Println(err)
 		return
 	}
 
@@ -58,7 +56,7 @@ func (ws *WSProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if messageType == websocket.BinaryMessage {
-				wsConn.eventError(fmt.Errorf("binary messages not supported"))
+				wsConn.eventError(clientError{fmt.Errorf("binary messages not supported")})
 			}
 			if err := wsConn.fromClient(p); err != nil {
 				wsConn.eventError(fmt.Errorf("processing message from client: %w", err))

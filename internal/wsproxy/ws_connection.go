@@ -3,7 +3,9 @@ package wsproxy
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -32,7 +34,7 @@ func (c *wsConnection) fromClient(msg []byte) error {
 		Cmd string `json:"cmd"`
 	}
 	if err := json.Unmarshal(msg, &v); err != nil {
-		return fmt.Errorf("decoding command name: %w", err)
+		return clientError{fmt.Errorf("message is invalid json: %w", err)}
 	}
 
 	var cmd command
@@ -42,13 +44,13 @@ func (c *wsConnection) fromClient(msg []byte) error {
 	case "close":
 		cmd = new(cmdClose)
 	case "":
-		return fmt.Errorf("given object needs attribute `cmd`")
+		return clientError{fmt.Errorf("given object needs attribute `cmd`")}
 	default:
-		return fmt.Errorf("unknown command `%s`", v.Cmd)
+		return clientError{fmt.Errorf("unknown command `%s`", v.Cmd)}
 	}
 
 	if err := json.Unmarshal(msg, &cmd); err != nil {
-		return fmt.Errorf("decoding cmd: %w", err)
+		return clientError{fmt.Errorf("message is invalid json: %w", err)}
 	}
 
 	if err := cmd.Call(c); err != nil {
@@ -97,7 +99,13 @@ func (c *wsConnection) eventData(id int, data json.RawMessage) {
 }
 
 func (c *wsConnection) eventError(err error) {
-	c.event(`{"event":"error","reason":"%s"}`, err.Error())
+	var errClient clientError
+	if errors.As(err, &errClient) {
+		c.event(`{"event":"error","reason":"%s"}`, err.Error())
+		return
+	}
+	c.event(`{"event":"error","reason":"Internal error"}`)
+	log.Printf("Error: %v", err)
 }
 
 func (c *wsConnection) event(format string, a ...interface{}) {
