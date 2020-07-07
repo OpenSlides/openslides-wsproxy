@@ -2,6 +2,7 @@ package wsproxy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -43,18 +44,24 @@ func (ws *WSProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Read on connection
 	go func() {
 		defer close(readDone)
+		defer wsConn.Close()
 
 		for {
 			messageType, p, err := conn.ReadMessage()
 			if err != nil {
-				wsConn.eventError(err)
+				var closeErr *websocket.CloseError
+				if errors.As(err, &closeErr) {
+					return
+				}
+
+				wsConn.eventError(fmt.Errorf("read websocket message: %w", err))
 				return
 			}
 			if messageType == websocket.BinaryMessage {
 				wsConn.eventError(fmt.Errorf("binary messages not supported"))
 			}
 			if err := wsConn.fromClient(p); err != nil {
-				wsConn.eventError(err)
+				wsConn.eventError(fmt.Errorf("processing message from client: %w", err))
 			}
 		}
 	}()

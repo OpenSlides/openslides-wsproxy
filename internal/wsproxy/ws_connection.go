@@ -69,6 +69,16 @@ func (c *wsConnection) CloseConn(id int) {
 	c.conns[id]()
 }
 
+func (c *wsConnection) Close() {
+	c.connsMu.Lock()
+	defer c.connsMu.Unlock()
+
+	for _, close := range c.conns {
+		close()
+	}
+	close(c.out)
+}
+
 // toClient returns a channel where messages to the client can be received from.
 func (c *wsConnection) toClient() <-chan []byte {
 	return c.out
@@ -91,5 +101,10 @@ func (c *wsConnection) eventError(err error) {
 }
 
 func (c *wsConnection) event(format string, a ...interface{}) {
+	defer func() {
+		// This happens when c.out was closed. This is not clean. Is there a
+		// better way to do this?
+		recover()
+	}()
 	c.out <- []byte(fmt.Sprintf(format, a...))
 }

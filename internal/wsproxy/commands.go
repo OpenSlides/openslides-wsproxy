@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -134,6 +135,9 @@ func readerToChan(r io.Reader) <-chan []byte {
 		}
 		if err := scanner.Err(); err != nil {
 			// TODO handle error
+			if errors.Is(err, context.Canceled) {
+				return
+			}
 			log.Printf("scanner: %v", err)
 			return
 		}
