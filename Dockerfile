@@ -1,28 +1,42 @@
-FROM golang:1.14-alpine as builder
+From golang:1.14-alpine as basis
 LABEL maintainer="OpenSlides Team <info@openslides.com>"
 WORKDIR /root/
 
-# Install git, it is needed to install the dependencies
-RUN apk --no-cache add git
+RUN apk add git
 
-# Preload dependencies
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy everything from the current directory
 COPY . .
 
-# Build the Go app
+
+# Build wsproxy in seperate stage
+FROM basis as builder
 RUN go build ./cmd/wsproxy
 
 
-######## Start a new stage from scratch #######
+# Test build.
+From basis as testing
+
+RUN apk add build-base
+
+CMD go vet ./... && go test ./...
+
+
+# Development build.
+FROM basis as development
+
+RUN ["go", "get", "github.com/githubnemo/CompileDaemon"]
+
+EXPOSE 9015
+CMD CompileDaemon -log-prefix=false -build="go build ./cmd/wsproxy" -command="./wsproxy"
+
+
+# Productive build.
 FROM alpine:latest
 WORKDIR /root/
 
-# Copy the Pre-built binary file from the previous stage
 COPY --from=builder /root/wsproxy .
 
 EXPOSE 9015
-
 CMD ./wsproxy
