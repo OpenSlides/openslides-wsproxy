@@ -94,7 +94,7 @@ func (c *wsConnection) eventConnected(id int) {
 }
 
 func (c *wsConnection) eventColse(id int, code int, reason json.RawMessage) {
-	c.event(`{"event":"close","id":%d,"code":%d,"reason":"%s"}`, id, code, reason)
+	c.event(`{"event":"close","id":%d,"code":%d,"reason":%s}`, id, code, reason)
 }
 
 func (c *wsConnection) eventData(id int, data json.RawMessage) {

@@ -70,6 +70,11 @@ func (c *cmdConnect) Call(conn *wsConnection) error {
 			return fmt.Errorf("reading response body: %w", err)
 		}
 
+		// Suround the body with ""
+		// TODO: This will break when the body is longer then one line or contains "
+		body = append([]byte{'"'}, body...)
+		body = append(body, '"')
+
 		conn.eventColse(c.id, resp.StatusCode, body)
 		return nil
 	}
@@ -98,7 +103,7 @@ func (c *cmdConnect) Call(conn *wsConnection) error {
 			case err := <-errChan:
 				var closedErr backendClosedError
 				if errors.As(err, &closedErr) {
-					reason = []byte("connection to backend lost")
+					reason = []byte(`"connection to backend lost"`)
 					return
 				}
 				log.Printf("Error reading from backend: %v", err)
