@@ -2,12 +2,15 @@ package wsproxy
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/net/http2"
 )
 
 var upgrader = websocket.Upgrader{
@@ -18,12 +21,23 @@ var upgrader = websocket.Upgrader{
 // WSProxy holds the state of the proxy.
 type WSProxy struct {
 	geturler GetURLer
+	client   http.Client
 }
 
 // New returns an initialized WSProxy.
 func New(geturler GetURLer) *WSProxy {
 	return &WSProxy{
 		geturler: geturler,
+
+		// Use a client, hat connects via http2 without tls.
+		client: http.Client{
+			Transport: &http2.Transport{
+				AllowHTTP: true,
+				DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+					return net.Dial(network, addr)
+				},
+			},
+		},
 	}
 }
 
@@ -36,7 +50,7 @@ func (ws *WSProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(r.Context())
 	defer cancel()
 
-	wsConn := newWSConnection(ctx, ws.geturler)
+	wsConn := newWSConnection(ctx, ws.geturler, ws.client)
 
 	readDone := make(chan struct{})
 	// Read on connection

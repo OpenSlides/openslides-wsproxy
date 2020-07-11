@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 )
 
@@ -13,15 +14,17 @@ type wsConnection struct {
 	ctx      context.Context
 	getURLer GetURLer
 	out      chan []byte
+	client   http.Client
 
 	connsMu sync.Mutex
 	conns   map[int]func()
 }
 
-func newWSConnection(ctx context.Context, getURLer GetURLer) *wsConnection {
+func newWSConnection(ctx context.Context, getURLer GetURLer, client http.Client) *wsConnection {
 	c := &wsConnection{
 		ctx:      ctx,
 		getURLer: getURLer,
+		client:   client,
 		out:      make(chan []byte, 1),
 		conns:    make(map[int]func()),
 	}
@@ -91,7 +94,7 @@ func (c *wsConnection) eventConnected(id int) {
 }
 
 func (c *wsConnection) eventColse(id int, code int, reason json.RawMessage) {
-	c.event(`{"event":"close","id":%d,"code":%d,"reason":%s}`, id, code, reason)
+	c.event(`{"event":"close","id":%d,"code":%d,"reason":"%s"}`, id, code, reason)
 }
 
 func (c *wsConnection) eventData(id int, data json.RawMessage) {

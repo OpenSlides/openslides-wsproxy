@@ -16,7 +16,7 @@ func TestConnectionFromClientToClient(t *testing.T) {
 	defer b.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	c := newWSConnection(ctx, b)
+	c := newWSConnection(ctx, b, *http.DefaultClient)
 
 	t.Run("Open connection", func(t *testing.T) {
 		data := []byte(`{"cmd":"connect","id":2,"url":"/some/path"}`)

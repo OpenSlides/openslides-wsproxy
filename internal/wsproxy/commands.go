@@ -59,7 +59,7 @@ func (c *cmdConnect) Call(conn *wsConnection) error {
 		return fmt.Errorf("building request: %w", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := conn.client.Do(req)
 	if err != nil {
 		return fmt.Errorf("sending request to `%s`: %w", c.url, err)
 	}

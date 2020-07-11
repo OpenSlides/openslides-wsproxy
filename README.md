@@ -71,7 +71,7 @@ used.
 When the service is running, a websocket connection can be created with:
 
 ```
-websocat ws://localhost:9015/system/autoupdate
+websocat ws://localhost:9015/system/wsproxy
 ```
 
 Afterwards it is possible to create connections to the autoupdate service by
